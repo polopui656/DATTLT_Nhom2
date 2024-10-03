@@ -1,0 +1,20 @@
+h1, h3 {
+    background-color: chocolate;
+    color: yellow;
+    text-align: center;
+    padding: 10px;
+}
+
+#input_option {
+    background-color: aquamarine;
+    
+}
+
+label {
+    font-size: large;
+}
+
+button {
+    font-size: large;
+
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{url_for('static', filename = 'style/styles.css')}}">
+    <title>Random Number Generator</title>
+</head>
+<body>
+    <h1>Random Number Generator (1-999)</h1>
+    
+    <form method="POST">
+        <label for="num_count">Enter how many numbers you want to generate:</label>
+        <input type="text" id="num_count" name="num_count" placeholder="Enter a number (1-999)">
+        <button type="submit">Generate</button>
+    </form>
+    
+    {% if numbers %}
+        <h2>Generated Numbers:</h2>
+        <ul>
+            {% for number in numbers %}
+                <li>{{ number }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    <div id="input_option">
+        <button type="submit">Merge Sort</button>
+        <button>Quick Sort</button>
+        <button>Bubble Sort</button>
+        <button>Selection Sort</button>
+        <label for="arraynumber">Array number: </label>
+        <input id="arraynumber" type="range">
+        <h3>Comparing algorithm</h3>
+    </div>
+
+</body>
+</html>
