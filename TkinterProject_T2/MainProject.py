@@ -93,7 +93,7 @@ def selection_sort(data):
         win.update_idletasks()
         time.sleep(speed_control.get() / 1000)
 
-# Phân vùng cho Quick Sort
+#Phân vùng cho Quick Sort
 def partition(data, low, high):
     pivot = data[high]
     i = low - 1
