@@ -77,7 +77,7 @@ def merge(leftData, rightData):
             j += 1
         combined = result + leftData[i:] + rightData[j:]
         draw_bars(combined, ['green' if x == len(result) - 1 else 'blue' for x in range(len(combined))])
-        time.sleep(speed_control.get() / 1000)
+        time.sleep(speed_control.get() / 300)
 
     result += leftData[i:]
     result += rightData[j:]
@@ -98,7 +98,7 @@ def quick_sort(data, low, high):
     if low < high:
         pi = partition(data, low, high)
         draw_bars(data, ['green' if x == pi else 'blue' for x in range(len(data))])
-        time.sleep(speed_control.get() / 1000)
+        time.sleep(speed_control.get() / 100)
         quick_sort(data, low, pi - 1)
         quick_sort(data, pi + 1, high)
 
@@ -107,11 +107,21 @@ def partition(data, low, high):
     pivot = data[high]
     i = low - 1
     for j in range(low, high):
+        draw_bars(data, ['red' if x == j else 'blue' for x in range(len(data))])
+        win.update_idletasks()
+        time.sleep(speed_control.get() / 300)
         if data[j] <= pivot:
             i += 1
             data[i], data[j] = data[j], data[i]
+            draw_bars(data, ['green' if x == i or x == j else 'blue' for x in range(len(data))])
+            time.sleep(speed_control.get() / 100)
     data[i + 1], data[high] = data[high], data[i + 1]
+    draw_bars(data, ['green' if x == i + 1 or x == high else 'blue' for x in range(len(data))])
+    win.update_idletasks()
+    time.sleep(speed_control.get() / 300)
     return i + 1
+
+
 
 # Thuật toán Selection Sort
 def selection_sort(data):
@@ -123,7 +133,7 @@ def selection_sort(data):
                 min_index = j
         data[i], data[min_index] = data[min_index], data[i]
         draw_bars(data,['green'if x == i else 'blue' for x in range(len(data))])
-        time.sleep(speed_control.get() / 1000)
+        time.sleep(speed_control.get() / 300)
 
 #Thuật toán Bubble Sort
 def bubble_sort(data):
@@ -133,7 +143,7 @@ def bubble_sort(data):
             if data[j] > data[j+1]:
                 data[j], data[j+1] = data[j+1], data[j] # Đổi chỗ hai phần tử
                 draw_bars(data, ['green' if x == j or x == j+1 else 'blue' for x in range(len(data))]) # Vẽ lại biểu đồ với màu khác cho hai phần tử đang được hoán đổi
-    time.sleep(speed_control.get() / 1000)               # Điều chỉnh tốc độ bằng thanh trượt
+                time.sleep(speed_control.get() / 300)               # Điều chỉnh tốc độ bằng thanh trượt
     draw_bars(data, ['blue' for _ in range(len(data))])  # Trả lại màu mặc định sau khi sắp xếp xong
 
 
@@ -222,8 +232,9 @@ slider_frame.pack()
 
 slider_label = tk.Label(slider_frame, text='  Speed:')
 slider_label.pack(side=tk.LEFT)
-speed_control = ttk.Scale(slider_frame, from_=0, to=1000)
+speed_control = ttk.Scale(slider_frame, from_=0, to=300)
 speed_control.pack(side=tk.LEFT)
+speed_control.set(50)
 def update_slider_label(event):
     slider_label.config(text=f'Speed: {int(speed_control.get())}')
 speed_control.bind("<Motion>", update_slider_label)
