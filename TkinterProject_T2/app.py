@@ -1,107 +1,94 @@
-from heapq import merge
 import tkinter as tk
 import random
-from tkinter import font
-import matplotlib.pyplot as plt
-
-# Tạo số ngẫu nhiên
-def generate_random_numbers():
-    try:
-        count = int(entry.get())
-        random_numbers = [random.randint(0, 999) for _ in range(count)]
-        result_label.config(text=", ".join(map(str, random_numbers)))
-        plot_bar_chart(random_numbers)
-    except ValueError:
-        result_label.config(text="Please enter a valid number")
-
-# Bảng bar chart
-def plot_bar_chart(numbers):
-    plt.figure(figsize=(10, 6))
-    
-    # Sử dụng chỉ số làm trục x và giá trị làm độ cao của cột
-    indices = range(len(numbers))
-    plt.bar(indices, numbers, color='blue')
-
-    # Giá trị số ngẫu nhiên phía dưới mỗi cột
-    plt.xticks(indices, numbers, rotation=90)
-    
-    plt.xlabel("Index (Order of Generation)")
-    plt.ylabel("Random Number")
-    plt.title("Bar Chart of Random Numbers")
-    plt.tight_layout()  
-    plt.show()
-
-# Thuật toán Selection Sort
-def selection_sort(numbers):
-    n = len(numbers)
-    for i in range(n):
-        min_index = i
-        for j in range(i+1, n):
-            if numbers[j] < numbers[min_index]:
-                min_index = j
-        # Hoán đổi vị trí
-        numbers[i], numbers[min_index] = numbers[min_index], numbers[i]
-    return numbers
-
-# Thuật toán Merge Sort
-def merge_sort(numbers):
-    n = len(numbers)
-    if n <= 1:
-        return n
-    
-    mid = n // 2
-    left = numbers[:mid]
-    right = numbers[mid:]
-
-    sortLeft = merge_sort(left)
-    sortRight = merge_sort(right)
-
-    return merge(sortLeft, sortRight)
-
-def merge(left, right):
-    result = []
-    i = j = 0
-
-    while i < len(left) and j < len(right):
-        if left[i] < right [j]:
-            result.append(left[i])
-            i += 1
-        else:
-            result.append(right[j])
-            j += 1
-    
-    result.extend(left[i:])
-    result.extend(right[:j])
-
-    return result
-
-def sort_numbers():
-    if generate_random_numbers:
-        sorted_numbers = selection_sort(generate_random_numbers.copy())  
-        result_label.config(text=", ".join(map(str, sorted_numbers)))
-        plot_bar_chart(sorted_numbers, title="Random Numbers (Sorted by Selection Sort)")
 
 
-# Main code
-root = tk.Tk()
-root.geometry('900x500')
-root.title("Random Number Generator")
-
-prompt_label = tk.Label(root, text="Enter the number of random numbers to generate:")
-prompt_label.config(font=("Courier", 14))
-prompt_label.pack()
-
-entry = tk.Entry(root)
-entry.pack()
-
-generate_button = tk.Button(root, text="Generate", command=generate_random_numbers)
-generate_button.config(font=("Courier", 14))
-generate_button.pack()
+def swap_two_pos(pos_0, pos_1):
+    Bar1x1, _, Bar1x2, _ = canvas.coords(pos_0)
+    Bar2x1, _, Bar2x2, _ = canvas.coords(pos_1)
+    canvas.move(pos_0, Bar2x1-Bar1x1, 0)
+    canvas.move(pos_1, Bar1x2-Bar2x2, 0)
 
 
+def _insertion_sort():
+    global barList
+    global lengthList
+
+    for i in range(len(lengthList)):
+        cursor = lengthList[i]
+        cursorBar = barList[i]
+        pos = i
+
+        while pos > 0 and lengthList[pos - 1] > cursor:
+            lengthList[pos] = lengthList[pos - 1]
+            barList[pos], barList[pos - 1] = barList[pos - 1], barList[pos]
+            swap_two_pos(barList[pos],barList[pos-1])   # <-- updates the display
+            yield                                       # <-- suspends the execution
+            pos -= 1                                    # <-- execution resumes here when next is called
+
+        lengthList[pos] = cursor
+        barList[pos] = cursorBar
+        swap_two_pos(barList[pos],cursorBar)
 
 
-result_label = tk.Label(root, text="")
-result_label.pack()
+worker = None    # <-- Not a thread in spite of the name.
 
-root.mainloop()
+def insertion_sort():     # <-- commands the start of both the animation, and the sort
+    global worker
+    worker = _insertion_sort()
+    animate()
+
+
+def animate():      # <-- commands resuming the sort once the display has been updated
+                    # controls the pace of the animation
+    global worker
+    if worker is not None:
+        try:
+            next(worker)
+            window.after(10, animate)    # <-- repeats until the sort is complete,
+        except StopIteration:            # when the generator is exhausted
+            worker = None
+        finally:
+            window.after_cancel(animate) # <-- stop the callbacks
+
+
+def shuffle():
+    global barList
+    global lengthList
+    canvas.delete('all')
+    xstart = 5
+    xend = 15
+    barList = []
+    lengthList = []
+
+    for x in range(1, 60):
+        randomY = random.randint(1, 390)
+        x = canvas.create_rectangle(xstart, randomY, xend, 395, fill='red')
+        barList.append(x)
+        xstart += 10
+        xend += 10
+
+    for bar in barList:
+        x = canvas.coords(bar)
+        length = x[3] - x[1]
+        lengthList.append(length)
+
+    for i in range(len(lengthList)-1):
+        if lengthList[i] == min(lengthList):
+            canvas.itemconfig(barList[i], fill='blue')
+        elif lengthList[i] == max(lengthList):
+            canvas.itemconfig(barList[i], fill='green')
+
+
+window = tk.Tk()
+window.title('Sorting')
+window.geometry('600x435')
+canvas = tk.Canvas(window, width='600', height='400')
+canvas.grid(column=0,row=0, columnspan = 50)
+
+insert = tk.Button(window, text='Insertion Sort', command=insertion_sort)
+shuf = tk.Button(window, text='Shuffle', command=shuffle)
+insert.grid(column=1,row=1)
+shuf.grid(column=0, row=1)
+
+shuffle()
+window.mainloop()
