@@ -12,7 +12,8 @@ height = win.winfo_screenheight()
 win.geometry("%dx%d" % (width, height))
 
 data = []
-sort_thread = None
+sort_thread1 = None
+sort_thread2 = None
 is_paused = False
 is_stopped = False
 
@@ -29,13 +30,13 @@ def generate_random():
     except ValueError:
         pass
 
-# Hàm cho nhập thủ công và hiển thị các số
+# Hàm cho nhập thủ công và hiển thị các số trên cả hai biểu đồ
 def manual_input():
     global data
-    chart_area.delete("all")
     try:
         data = list(map(int, manual_entry.get().split(",")))
-        draw_bars(data)
+        draw_bars(data, chart_area1)
+        draw_bars(data, chart_area2)
     except ValueError:
         pass
 
@@ -50,8 +51,8 @@ def stop_sorting():
     global is_stopped
     is_stopped = True
 
-# Hàm cho chức năng vẽ bar chart
-def draw_bars(data, color_array=None):
+# Hàm cho chức năng vẽ bar chart, áp dụng cho mỗi biểu đồ riêng
+def draw_bars(data, chart_area, color_array=None):
     chart_area.delete("all")
     max_value = max(data)
     bar_width = 50
@@ -73,8 +74,8 @@ def draw_bars(data, color_array=None):
     win.update_idletasks()
     return bar_positions
 
-# Hàm hoán đổi vị trí của hai thanh với animation mượt mà
-def animate_swap(bar_positions, i, j, duration=0.01):
+# Hàm hoán đổi vị trí của hai thanh với animation mượt mà trên mỗi biểu đồ riêng
+def animate_swap(bar_positions, i, j, chart_area, duration=0.01):
     chart_area.itemconfig(bar_positions[i][0], fill="green")
     chart_area.itemconfig(bar_positions[j][0], fill="green")
     win.update_idletasks()
@@ -96,67 +97,76 @@ def animate_swap(bar_positions, i, j, duration=0.01):
     win.update_idletasks()
 
 # Thuật toán Merge Sort
-def merge_sort(data, left, right):
-    if left < right:
-        m = (left + right) // 2
-        merge_sort(data, left, m)
-        merge_sort(data, m + 1, right)
-        merge(data, left, m, right)        
-        draw_bars(data)
-        time.sleep(speed_control.get() / 100)
-        win.update_idletasks()
-
-def merge(data, left, m, right):
+def merge_sort(data, l, r, chart_area):
+    if l < r:
+        m = l + (r-l)//2
+        merge_sort(data, l, m, chart_area)
+        merge_sort(data, m+1, r, chart_area)
+        merge(data, l, m, r, chart_area)
+        
+def merge(data, l, m, r, chart_area):
     global is_paused, is_stopped
-    bar_positions = draw_bars(data)
-    i =left
-    j = m + 1
-    temp = []
+    bar_positions = draw_bars(data, chart_area)
+    n1 = m - l + 1
+    n2 = r - m
+    L = [0] * (n1)
+    R = [0] * (n2)
 
     while is_paused:
         time.sleep(0.1)
     if is_stopped:
         return
 
-    while i <= m and j <= right:
-        
-        animate_swap(bar_positions, left, j)
-        bar_positions = draw_bars(data)
-        time.sleep(speed_control.get() / 300)
-        win.update_idletasks()
+    for i in range (0, n1):
+        L[i] = data[l + i]
+    
+    for j in range (0, n2):
+        R[j] = data[m + 1 + j]
 
-        if data[i] <= data[j]:
-            temp.append(data[i])
+    i = 0
+    j = 0
+    k = l
+
+    while i < n1 and j < n2:
+        if L[i] <= R[j]:
+            data[k] = L[i]
+            animate_swap(bar_positions, l + i, k, chart_area)
             i += 1
         else:
-            temp.append(data[j])
+            data[k] = R[j]
+            animate_swap( bar_positions, m + 1 + j, k, chart_area)
             j += 1
+        k += 1
+        bar_positions = draw_bars(data, chart_area)
 
-    while i <= m:
-        temp.append(data[i])
+    while i < n1:
+        data[k] = L[i]
+        animate_swap(bar_positions, l + i, k, chart_area)
         i += 1
-        
-    while j <= right:
-        temp.append(data[j])
-        j += 1
-        
+        k += 1
+        bar_positions = draw_bars(data, chart_area)
 
-    for k in range(len(temp)):
-        data[left + k] = temp[k]
-        bar_positions = draw_bars(data)
-        time.sleep(speed_control.get() / 300)
-        win.update_idletasks()
+    while j < n2:
+        data[k] = R[j]
+        animate_swap( bar_positions, m + 1 + j, k, chart_area)
+        j += 1
+        k += 1
+        bar_positions = draw_bars(data, chart_area)
+    time.sleep(0.3 /speed_control.get())
+    win.update_idletasks()
+
+# Các thuật toán khác cũng sẽ được cập nhật tương tự để sử dụng chart_area thích hợp
 
 # Thuật toán Quick Sort
-def quick_sort(data, low, high):
+def quick_sort(data, low, high, chart_area):
     if low < high:
-        pi = partition(data, low, high)
-        quick_sort(data, low, pi - 1)
-        quick_sort(data, pi + 1, high)
+        pi = partition(data, low, high, chart_area)
+        quick_sort(data, low, pi - 1, chart_area)
+        quick_sort(data, pi + 1, high, chart_area)
 
-def partition(data, low, high):
+def partition(data, low, high, chart_area):
     global is_paused, is_stopped
-    bar_positions = draw_bars(data)
+    bar_positions = draw_bars(data, chart_area)
     pivot = data[high]
     i = low - 1
     for j in range(low, high):
@@ -167,22 +177,21 @@ def partition(data, low, high):
         if data[j] <= pivot:
             i += 1
             data[i], data[j] = data[j], data[i]
-            animate_swap(bar_positions, i, j)
-            bar_positions = draw_bars(data)
-            time.sleep(speed_control.get() / 300)
-            
+            animate_swap(bar_positions, i, j, chart_area)
+            bar_positions = draw_bars(data, chart_area)
+            #time.sleep(0.3 /speed_control.get())       
     data[i + 1], data[high] = data[high], data[i + 1]
-    animate_swap(bar_positions, i+1, high)
-    bar_positions = draw_bars(data)
-    time.sleep(speed_control.get() / 300)
+    animate_swap(bar_positions, i+1, high, chart_area)
+    bar_positions = draw_bars(data, chart_area)
+    time.sleep(0.3 / speed_control.get())
     win.update_idletasks()
     return i + 1
 
 # Thuật toán Selection Sort
-def selection_sort(data):
+def selection_sort(data, chart_area):
     global is_paused, is_stopped
     n = len(data)
-    bar_positions = draw_bars(data)
+    bar_positions = draw_bars(data, chart_area)
     for i in range(n):
         min_index = i
         for j in range(i + 1, n):
@@ -193,60 +202,90 @@ def selection_sort(data):
             if data[j] < data[min_index]:
                 min_index = j
         data[i], data[min_index] = data[min_index], data[i]
-        animate_swap(bar_positions, i, min_index)
-        bar_positions = draw_bars(data)
-        time.sleep(speed_control.get() / 300)
+        animate_swap(bar_positions, i, min_index, chart_area)
+        bar_positions = draw_bars(data, chart_area)
+        time.sleep(0.3 /speed_control.get())
         win.update_idletasks()
 
 # Thuật toán Bubble Sort
-def bubble_sort(data):
+def bubble_sort(data, chart_area):
     global is_paused, is_stopped
     n = len(data)
-    bar_positions = draw_bars(data)
+    bar_positions = draw_bars(data, chart_area)
     for i in range(n):
         for j in range(0, n - i - 1):
             while is_paused:
                 time.sleep(0.1)
             if is_stopped:
-                break
+                return
+            # So sánh hai phần tử liên tiếp
             if data[j] > data[j + 1]:
+                # Hoán đổi các phần tử nếu phần tử bên trái lớn hơn phần tử bên phải
                 data[j], data[j + 1] = data[j + 1], data[j]
-                animate_swap(bar_positions, j, j + 1)
-                bar_positions = draw_bars(data)
-                time.sleep(speed_control.get() / 300)
+                animate_swap(bar_positions, j, j + 1, chart_area)  # Hiệu ứng di chuyển mượt
+                bar_positions = draw_bars(data, chart_area)
+                time.sleep(0.3 /speed_control.get())
+        # Vẽ lại tất cả thanh với màu xanh dương ngoại trừ những thanh đã sắp xếp xong (màu xanh lá)
+        bar_positions = draw_bars(data, chart_area)
+        win.update_idletasks()
+    # Đảm bảo tất cả thanh trở về màu xanh dương khi sắp xếp xong
+    bar_positions = draw_bars(data, chart_area)
 
-# Chức năng thực hiện sorting theo lựa chọn từ dropdown
+def insert_sort(data, chart_area):
+    global is_paused, is_stopped
+    n = len(data)
+    if n<=1:
+        return
+    bar_positions = draw_bars(data, chart_area)
+
+    for i in range (1,n):
+        key=data[i]
+        j =i-1
+        while j>=0 and key < data[j]:
+            data[j+1]= data[j]
+            j -= 1
+        data[j+1] = key
+        
+        if j + 1 != i:
+            animate_swap(bar_positions, j + 1, i, chart_area)
+
+        bar_positions = draw_bars(data,chart_area)
+        win.update_idletasks()
+        time.sleep(0.3 /speed_control.get())
+    win.update_idletasks()
+
+# Chức năng thực hiện sorting theo lựa chọn từ dropdown cho từng biểu đồ
+def run_sorting_algorithm(selected_algo, data, chart_area, time_label):
+    start_time = time.time()
+    sort_algorithms = {
+        "Merge Sort": lambda: merge_sort(data, 0, len(data) - 1, chart_area),
+        "Quick Sort": lambda: quick_sort(data, 0, len(data) - 1, chart_area),
+        "Selection Sort": lambda: selection_sort(data, chart_area),
+        "Bubble Sort": lambda: bubble_sort(data, chart_area),
+        "Insertion Sort": lambda: insert_sort(data, chart_area),
+    }
+    sort_algorithms[selected_algo]()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    time_label.config(text=f"Sorting Time: {elapsed_time:.2f} seconds")
+
 def start_sorting():
-    global sort_thread, is_paused, is_stopped
+    global sort_thread1, sort_thread2, is_paused, is_stopped
     is_paused = False
     is_stopped = False
-    selected_algo = algo_dropdown.get()
-    
-    sort_algorithms = {
-        "Merge Sort": lambda: merge_sort(data, 0, len(data) - 1),
-        "Quick Sort": lambda: quick_sort(data, 0, len(data) - 1),
-        "Selection Sort": lambda: selection_sort(data),
-        "Bubble Sort": lambda: bubble_sort(data),
-    }
+    selected_algo1 = algo_dropdown1.get()
+    selected_algo2 = algo_dropdown2.get()
 
-    sort_thread = threading.Thread(target=sort_algorithms[selected_algo])
-    sort_thread.start()
+    sort_thread1 = threading.Thread(target=run_sorting_algorithm, args=(selected_algo1, data.copy(), chart_area1, time_label1))
+    sort_thread2 = threading.Thread(target=run_sorting_algorithm, args=(selected_algo2, data.copy(), chart_area2, time_label2))
 
-# Giao diện cho phần nhập
+    sort_thread1.start()
+    sort_thread2.start()
+
+# Giao diện cho phần nhập và các nút chức năng
 input_frame = tk.Frame(win)
-input_frame.pack()
+input_frame.pack(anchor='w')
 
-# Giao diện cho Manual Input
-manual_label = tk.Label(input_frame, text="Manual Input:")
-manual_label.pack(side=tk.LEFT)
-manual_entry = tk.Entry(input_frame, width=30)
-manual_entry.pack(side=tk.LEFT)
-manual_entry.insert(0, "3, 5, 4, 9, 8, 7, 1, 2, 10, 6")
-
-manual_button = ttk.Button(input_frame, text="Input Numbers", command=manual_input)
-manual_button.pack(side=tk.LEFT, padx=10)
-
-# Giao diện cho Random Input
 min_label = tk.Label(input_frame, text="Min:")
 min_label.pack(side=tk.LEFT)
 min_entry = tk.Entry(input_frame, width=5)
@@ -262,30 +301,40 @@ max_entry.insert(0, "100")
 count_label = tk.Label(input_frame, text="Count:")
 count_label.pack(side=tk.LEFT)
 count_entry = tk.Entry(input_frame, width=5)
-count_entry.pack(side=tk.LEFT)
+count_entry.pack(side=tk.LEFT, padx=10)
 count_entry.insert(0, "10")
 
-generate_random_button = ttk.Button(input_frame, text="Generate Number", command=generate_random)
-generate_random_button.pack(side=tk.LEFT, padx=10)
+manual_label = tk.Label(input_frame, text="Manual Input:")
+manual_label.pack(side=tk.LEFT)
+manual_entry = tk.Entry(input_frame, width=30)
+manual_entry.pack(side=tk.LEFT)
+manual_entry.insert(0, "3, 5, 4, 9, 8, 7, 1, 2, 10, 6")
 
-# Dropdown menu cho lựa chọn thuật toán sắp xếp
-algo_dropdown_label = tk.Label(input_frame, text="Choose algorithm:")
-algo_dropdown_label.pack(side=tk.LEFT, padx=10)
+generate_random_button = ttk.Button(input_frame, text="Random Number", command=generate_random)
+generate_random_button.pack(side=tk.LEFT)
 
-algo_options = ["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort"]
-algo_dropdown = ttk.Combobox(input_frame, values=algo_options)
-algo_dropdown.set("Merge Sort")
-algo_dropdown.pack(side=tk.LEFT)
+manual_button = ttk.Button(input_frame, text="Input Numbers", command=manual_input)
+manual_button.pack(side=tk.LEFT)
 
-# Nút Start Sorting
+algo_dropdown1_label = tk.Label(input_frame, text="Choose algorithm for Bar Chart 1:")
+algo_dropdown1_label.pack(side=tk.LEFT, padx=5)
+algo_dropdown1 = ttk.Combobox(input_frame, values=["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"])
+algo_dropdown1.set("Merge Sort")
+algo_dropdown1.pack(side=tk.LEFT)
+
+algo_dropdown2_label = tk.Label(input_frame, text="Choose algorithm for Bar Chart 2:")
+algo_dropdown2_label.pack(side=tk.LEFT, padx=5)
+algo_dropdown2 = ttk.Combobox(input_frame, values=["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"])
+algo_dropdown2.set("Quick Sort")
+algo_dropdown2.pack(side=tk.LEFT)
+
 start_button = ttk.Button(input_frame, text="Start Sorting", command=start_sorting)
-start_button.pack(side=tk.LEFT, padx=20)
+start_button.pack(side=tk.LEFT)
 
-# Điều khiển thanh trượt (slider)
 slider_frame = tk.Frame(win)
-slider_frame.pack()
+slider_frame.pack(anchor='w')
 
-slider_label = tk.Label(slider_frame, text="  Speed:")
+slider_label = tk.Label(slider_frame, text="Speed:")
 slider_label.pack(side=tk.LEFT)
 speed_control = ttk.Scale(slider_frame, from_=0, to=300)
 speed_control.pack(side=tk.LEFT)
@@ -302,9 +351,28 @@ pause_button.pack(side=tk.LEFT, padx=20)
 stop_button = ttk.Button(slider_frame, text="Stop", command=stop_sorting)
 stop_button.pack(side=tk.LEFT)
 
-# Vùng biểu đồ cột
-chart_area = tk.Canvas(win, bg="white")
-chart_area.pack(fill=tk.BOTH, expand=True)
+frame1 = ttk.Frame(win, height=800, width=700, borderwidth=10, relief=tk.GROOVE)
+frame1.pack_propagate(False)
+frame1.pack(side=tk.LEFT, anchor="w")
 
-# Bắt đầu giao diện
+f1_label = ttk.Label(frame1, text="Bar Chart 1")
+f1_label.pack()
+
+chart_area1 = tk.Canvas(frame1, bg="white")
+chart_area1.pack(fill=tk.BOTH, expand=True)
+time_label1 = ttk.Label(frame1, text="Sorting Time: 0.0 seconds")
+time_label1.pack()
+
+frame2 = ttk.Frame(win, height=800, width=700, borderwidth=10, relief=tk.GROOVE)
+frame2.pack_propagate(False)
+frame2.pack(side=tk.LEFT, anchor="e", padx=10)
+
+f2_label = ttk.Label(frame2, text="Bar Chart 2")
+f2_label.pack()
+
+chart_area2 = tk.Canvas(frame2, bg="white")
+chart_area2.pack(fill=tk.BOTH, expand=True)
+time_label2 = ttk.Label(frame2, text="Sorting Time: 0.0 seconds")
+time_label2.pack()
+
 win.mainloop()
