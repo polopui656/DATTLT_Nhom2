@@ -231,6 +231,7 @@ def bubble_sort(data, chart_area):
     # Đảm bảo tất cả thanh trở về màu xanh dương khi sắp xếp xong
     bar_positions = draw_bars(data, chart_area)
 
+# Thuật toán Insertion Sort
 def insert_sort(data, chart_area):
     global is_paused, is_stopped
     n = len(data)
@@ -269,6 +270,7 @@ def run_sorting_algorithm(selected_algo, data, chart_area, time_label):
     elapsed_time = end_time - start_time
     time_label.config(text=f"Sorting Time: {elapsed_time:.2f} seconds")
 
+# Chức năng sắp xếp thuật toán 
 def start_sorting():
     global sort_thread1, sort_thread2, is_paused, is_stopped
     is_paused = False
@@ -310,27 +312,32 @@ manual_entry = tk.Entry(input_frame, width=30)
 manual_entry.pack(side=tk.LEFT)
 manual_entry.insert(0, "3, 5, 4, 9, 8, 7, 1, 2, 10, 6")
 
+# Nút Random & Input
 generate_random_button = ttk.Button(input_frame, text="Random Number", command=generate_random)
 generate_random_button.pack(side=tk.LEFT)
 
 manual_button = ttk.Button(input_frame, text="Input Numbers", command=manual_input)
 manual_button.pack(side=tk.LEFT)
 
+# ComboBox Thuật Toán của Bảng 1
 algo_dropdown1_label = tk.Label(input_frame, text="Choose algorithm for Bar Chart 1:")
 algo_dropdown1_label.pack(side=tk.LEFT, padx=5)
 algo_dropdown1 = ttk.Combobox(input_frame, values=["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"])
 algo_dropdown1.set("Merge Sort")
 algo_dropdown1.pack(side=tk.LEFT)
 
+# ComboBox Thuật Toán của Bảng 2
 algo_dropdown2_label = tk.Label(input_frame, text="Choose algorithm for Bar Chart 2:")
 algo_dropdown2_label.pack(side=tk.LEFT, padx=5)
 algo_dropdown2 = ttk.Combobox(input_frame, values=["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"])
 algo_dropdown2.set("Quick Sort")
 algo_dropdown2.pack(side=tk.LEFT)
 
+# Nút Start
 start_button = ttk.Button(input_frame, text="Start Sorting", command=start_sorting)
 start_button.pack(side=tk.LEFT)
 
+# Điều khiển tốc độ
 slider_frame = tk.Frame(win)
 slider_frame.pack(anchor='w')
 
@@ -345,12 +352,14 @@ def update_slider_label(event):
 
 speed_control.bind("<Motion>", update_slider_label)
 
+# Nút Pause & Stop
 pause_button = ttk.Button(slider_frame, text="Pause", command=toggle_pause_resume)
 pause_button.pack(side=tk.LEFT, padx=20)
 
 stop_button = ttk.Button(slider_frame, text="Stop", command=stop_sorting)
 stop_button.pack(side=tk.LEFT)
 
+# Bảng Thứ 1
 frame1 = ttk.Frame(win, height=800, width=700, borderwidth=10, relief=tk.GROOVE)
 frame1.pack_propagate(False)
 frame1.pack(side=tk.LEFT, anchor="w")
@@ -363,6 +372,7 @@ chart_area1.pack(fill=tk.BOTH, expand=True)
 time_label1 = ttk.Label(frame1, text="Sorting Time: 0.0 seconds")
 time_label1.pack()
 
+# Bảng Thứ 2
 frame2 = ttk.Frame(win, height=800, width=700, borderwidth=10, relief=tk.GROOVE)
 frame2.pack_propagate(False)
 frame2.pack(side=tk.LEFT, anchor="e", padx=10)
@@ -375,4 +385,5 @@ chart_area2.pack(fill=tk.BOTH, expand=True)
 time_label2 = ttk.Label(frame2, text="Sorting Time: 0.0 seconds")
 time_label2.pack()
 
+# Bắt đầu Giao diện
 win.mainloop()
