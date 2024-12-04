@@ -483,9 +483,6 @@ def run_sorting_algorithm(selected_algo, data, chart_area, time_label, thread_id
         elapsed_time = time.time() - start_time
         time_label.config(text=f"Sorting Time: {elapsed_time:.2f} seconds")
 
-def run_chart_area(*arg):
-    chart_area_tab1.config(command=chart_area_tab1.get())
-
 def start_all_tabs_sorting():
     pause_event.clear()
     stop_event.clear()
