@@ -59,9 +59,12 @@ def generate_random_multithreaded():
             # Có dữ liệu: cập nhật giao diện
             manual_entry.delete(0, tk.END)
             manual_entry.insert(0, ", ".join(map(str, data)))
-            for canvas in [chart_area_tab1, chart_area_tab2_1, chart_area_tab2_2, chart_area_tab3_1, chart_area_tab3_2, chart_area_tab3_3]:
-                draw_bars(data, canvas) 
-            
+            draw_bars(data, chart_area_tab1)
+            draw_bars(data, chart_area_tab2_1)
+            draw_bars(data, chart_area_tab2_2)
+            draw_bars(data, chart_area_tab3_1)
+            draw_bars(data, chart_area_tab3_2)
+            draw_bars(data, chart_area_tab3_3)
             status_label.config(text="Random data generated successfully!", fg="green")
 
     # Tạo và chạy luồng để tạo dữ liệu
@@ -83,60 +86,38 @@ def toggle_pause_resume():
         pause_event.clear()
         pause_button.config(text="Pause")
     else:
-        pause_event.set()  # Đặt trạng thái tạm dừng
+        pause_event.set()
         pause_button.config(text="Resume")
 
 def stop_sorting():
     stop_event.set()
-    pause_event.clear()  # Dừng cũng bỏ trạng thái Pause
+    pause_event.clear()  # Bỏ tạm dừng nếu đang dừng
     pause_button.config(text="Pause")
-
 
 # Hàm cho chức năng vẽ bar chart, áp dụng cho mỗi biểu đồ riêng
 def draw_bars(data, chart_area, color_array=None):
-    # Xóa canvas trước khi vẽ
-    chart_area.delete("all")
-
-    if not data:  # Nếu không có dữ liệu, hiển thị thông báo
-        chart_area.create_text(
-            150, 300, text="No Data Available", fill="red", font=("Helvetica", 16)
-        )
-        return
-
-    # Lấy giá trị lớn nhất để chuẩn hóa chiều cao
+    chart_area.delete("all")  # Xóa canvas trước khi vẽ
     max_value = max(data)
-    bar_width = max(10, min(50, 600 // len(data)))
+    bar_width = 50
     spacing = 10
-    canvas_height = 600
-    canvas_width = chart_area.winfo_width()
-    max_bar_width = canvas_width // len(data) - spacing
-
-    if bar_width > max_bar_width:
-        bar_width = max_bar_width
+    bar_positions = []
 
     if color_array is None:
         color_array = ["blue" for _ in range(len(data))]
-
     for i, value in enumerate(data):
         x0 = i * (bar_width + spacing)
-        y0 = canvas_height - (value / max_value * (canvas_height - 50))
+        y0 = 600 - (value / max_value * 500)
         x1 = x0 + bar_width
-        y1 = canvas_height
+        y1 = 600
         color = color_array[i]
 
-        chart_area.create_rectangle(x0, y0, x1, y1, fill=color)
+        bar = chart_area.create_rectangle(x0, y0, x1, y1, fill=color)
         chart_area.create_text(
-            x0 + bar_width / 2,
-            y0 - 10,
-            text=str(value),
-            anchor=tk.S,
-            font=("Helvetica", 10),
+            x0 + bar_width / 2, y0 - 10, text=str(value), anchor=tk.S
         )
-
-    # Cập nhật giao diện
+        bar_positions.append((bar, x0, y0, x1, y1))
     win.update_idletasks()
-
-
+    return bar_positions
     
 def draw_bars_multithreaded(data, chart_area, color_array=None):
     def draw():
@@ -194,30 +175,28 @@ def draw_bars_multithreaded(data, chart_area, color_array=None):
 
 # Hàm hoán đổi vị trí của hai thanh với animation mượt mà trên mỗi biểu đồ riêng
 def animate_swap(bar_positions, i, j, chart_area, duration=0.01):
-    global stop_event
     # Đặt màu xanh lá cho các thanh đang chọn
     chart_area.itemconfig(bar_positions[i][0], fill="green")
     chart_area.itemconfig(bar_positions[j][0], fill="green")
     win.update_idletasks()
 
-    if not stop_event.is_set():  # Chỉ thực hiện hoán đổi nếu không dừng
-        x0_i, x1_i = bar_positions[i][1], bar_positions[i][3]
-        x0_j, x1_j = bar_positions[j][1], bar_positions[j][3]
+    x0_i, x1_i = bar_positions[i][1], bar_positions[i][3]
+    x0_j, x1_j = bar_positions[j][1], bar_positions[j][3]
 
-        steps = 400
-        delta_x_i = (x0_j - x0_i) / steps
-        delta_x_j = (x0_i - x0_j) / steps
+    # Chia nhỏ các bước di chuyển để tạo hiệu ứng mượt mà
+    steps = 400
+    delta_x_i = (x0_j - x0_i) / steps
+    delta_x_j = (x0_i - x0_j) / steps
 
-        for step in range(steps):
-            while pause_event.is_set():  # Dừng nếu tạm dừng
-                time.sleep(0.1)
-            if stop_event.is_set():  # Thoát nếu dừng
-                return
-            chart_area.move(bar_positions[i][0], delta_x_i, 0)
-            chart_area.move(bar_positions[j][0], delta_x_j, 0)
-            win.update_idletasks()
-            time.sleep(duration / steps)
-
+    for step in range(steps):
+        while pause_event.is_set():  # Dừng nếu trạng thái Pause được bật
+            time.sleep(0.1)
+        if stop_event.is_set():  # Thoát nếu trạng thái Stop được bật
+            return
+        chart_area.move(bar_positions[i][0], delta_x_i, 0)
+        chart_area.move(bar_positions[j][0], delta_x_j, 0)
+        win.update_idletasks()
+        time.sleep(duration / steps)
 
     # Hoán đổi vị trí trong danh sách
     bar_positions[i], bar_positions[j] = bar_positions[j], bar_positions[i]
@@ -240,87 +219,58 @@ def merge_sort(data, l, r, chart_area):
         merge_sort(data, l, m, chart_area)
         merge_sort(data, m + 1, r, chart_area)
         merge(data, l, m, r, chart_area)
-
+        draw_bars(data, chart_area)
 
 def merge(data, l, m, r, chart_area):
     global pause_event, stop_event
 
-    # Vẽ lại các thanh ban đầu
-    bar_positions = draw_bars_multithreaded(data, chart_area)
-
     n1 = m - l + 1
     n2 = r - m
-    L = [0] * n1
-    R = [0] * n2
-
-    # Copy dữ liệu vào hai mảng tạm thời L và R
-    for i in range(n1):
-        while pause_event.is_set:  # Dừng nếu trạng thái Pause
-            time.sleep(0.1)
-        if stop_event.is_set():  # Thoát nếu trạng thái Stop
-            return
-        L[i] = data[l + i]
-
-    for j in range(n2):
-        while pause_event.is_set:  # Dừng nếu trạng thái Pause
-            time.sleep(0.1)
-        if stop_event.is_set():  # Thoát nếu trạng thái Stop
-            return
-        R[j] = data[m + 1 + j]
+    L = data[l : m + 1]
+    R = data[m + 1 : r + 1]
 
     i = j = 0
     k = l
+    bar_positions = draw_bars(data, chart_area)
 
-    # Merge dữ liệu từ L và R vào data
     while i < n1 and j < n2:
-        while pause_event.is_set:  # Dừng nếu trạng thái Pause
+        while pause_event.is_set():
             time.sleep(0.1)
-        if stop_event.is_set():  # Thoát nếu trạng thái Stop
+        if stop_event.is_set():
             return
         if L[i] <= R[j]:
             data[k] = L[i]
-            animate_swap_multithreaded(bar_positions, l + i, k, chart_area)  # Hiệu ứng di chuyển
+            animate_swap(bar_positions, l + i, k, chart_area)
             i += 1
         else:
             data[k] = R[j]
-            animate_swap_multithreaded(bar_positions, m + 1 + j, k, chart_area)  # Hiệu ứng di chuyển
+            animate_swap(bar_positions, m + 1 + j, k, chart_area)
             j += 1
-        bar_positions = draw_bars_multithreaded(
-            data, chart_area, ["green" if x == k else "blue" for x in range(len(data))]
-        )  # Giữ màu xanh lá
+        bar_positions = draw_bars(data, chart_area)
+        time.sleep(0.3 / speed_control.get())
         k += 1
 
-    # Copy các phần tử còn lại của L (nếu có)
     while i < n1:
-        while pause_event.is_set:  # Dừng nếu trạng thái Pause
+        while pause_event.is_set():
             time.sleep(0.1)
-        if stop_event.is_set():  # Thoát nếu trạng thái Stop
+        if stop_event.is_set():
             return
         data[k] = L[i]
-        animate_swap_multithreaded(bar_positions, l + i, k, chart_area)  # Hiệu ứng di chuyển
-        bar_positions = draw_bars_multithreaded(
-            data, chart_area, ["green" if x == k else "blue" for x in range(len(data))]
-        )  # Giữ màu xanh lá
+        animate_swap(bar_positions, l + i, k, chart_area)
+        bar_positions = draw_bars(data, chart_area)
         i += 1
         k += 1
 
-    # Copy các phần tử còn lại của R (nếu có)
     while j < n2:
-        while pause_event.is_set:  # Dừng nếu trạng thái Pause
+        while pause_event.is_set():
             time.sleep(0.1)
-        if stop_event.is_set():  # Thoát nếu trạng thái Stop
+        if stop_event.is_set():
             return
         data[k] = R[j]
-        animate_swap_multithreaded(bar_positions, m + 1 + j, k, chart_area)  # Hiệu ứng di chuyển
-        bar_positions = draw_bars_multithreaded(
-            data, chart_area, ["green" if x == k else "blue" for x in range(len(data))]
-        )  # Giữ màu xanh lá
+        animate_swap(bar_positions, m + 1 + j, k, chart_area)
+        bar_positions = draw_bars(data, chart_area)
         j += 1
         k += 1
-
-    time.sleep(0.3 / speed_control.get())  # Điều chỉnh tốc độ
-    win.update_idletasks()
-
 
 # Thuật toán Quick Sort
 def quick_sort(data, low, high, chart_area):
@@ -329,17 +279,16 @@ def quick_sort(data, low, high, chart_area):
         return
     if low < high:
         pi = partition(data, low, high, chart_area)
-        if pi == -1:  # Thoát nếu Stop
+        if pi == -1:
             return
         quick_sort(data, low, pi - 1, chart_area)
         quick_sort(data, pi + 1, high, chart_area)
 
-
 def partition(data, low, high, chart_area):
     global pause_event, stop_event
-    bar_positions = draw_bars_multithreaded(data, chart_area)
     pivot = data[high]
     i = low - 1
+    bar_positions = draw_bars(data, chart_area)
 
     for j in range(low, high):
         while pause_event.is_set():
@@ -349,29 +298,20 @@ def partition(data, low, high, chart_area):
         if data[j] <= pivot:
             i += 1
             data[i], data[j] = data[j], data[i]
-            animate_swap_multithreaded(bar_positions, i, j, chart_area)
-            bar_positions = draw_bars_multithreaded(
-                data,
-                chart_area,
-                ["green" if x == i or x == j else "blue" for x in range(len(data))],
-            )
+            animate_swap(bar_positions, i, j, chart_area)
+            bar_positions = draw_bars(data, chart_area)
 
     data[i + 1], data[high] = data[high], data[i + 1]
-    animate_swap_multithreaded(bar_positions, i + 1, high, chart_area)
-    bar_positions = draw_bars_multithreaded(
-        data,
-        chart_area,
-        ["green" if x == i + 1 or x == high else "blue" for x in range(len(data))],
-    )
+    animate_swap(bar_positions, i + 1, high, chart_area)
+    bar_positions = draw_bars(data, chart_area)
     time.sleep(0.3 / speed_control.get())
     return i + 1
-
 
 # Thuật toán Selection Sort
 def selection_sort(data, chart_area):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars_multithreaded(data, chart_area)
+    bar_positions = draw_bars(data, chart_area)
 
     for i in range(n):
         while pause_event.is_set():
@@ -380,27 +320,22 @@ def selection_sort(data, chart_area):
             return
         min_index = i
         for j in range(i + 1, n):
-            while pause_event.is_set:
+            while pause_event.is_set():
                 time.sleep(0.1)
             if stop_event.is_set():
                 return
             if data[j] < data[min_index]:
                 min_index = j
         data[i], data[min_index] = data[min_index], data[i]
-        animate_swap_multithreaded(bar_positions, i, min_index, chart_area)
-        bar_positions = draw_bars_multithreaded(
-            data,
-            chart_area,
-            ["green" if x == i or x == min_index else "blue" for x in range(len(data))],
-        )
+        animate_swap(bar_positions, i, min_index, chart_area)
+        bar_positions = draw_bars(data, chart_area)
         time.sleep(0.3 / speed_control.get())
-
 
 # Thuật toán Bubble Sort
 def bubble_sort(data, chart_area):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars_multithreaded(data, chart_area)
+    bar_positions = draw_bars(data, chart_area)
 
     for i in range(n):
         while pause_event.is_set():
@@ -408,30 +343,21 @@ def bubble_sort(data, chart_area):
         if stop_event.is_set():
             return
         for j in range(0, n - i - 1):
-            while pause_event.is_set:
+            while pause_event.is_set():
                 time.sleep(0.1)
             if stop_event.is_set():
                 return
             if data[j] > data[j + 1]:
                 data[j], data[j + 1] = data[j + 1], data[j]
-                animate_swap_multithreaded(bar_positions, j, j + 1, chart_area)
-                bar_positions = draw_bars_multithreaded(
-                    data,
-                    chart_area,
-                    [
-                        "green" if x == j or x == j + 1 else "blue"
-                        for x in range(len(data))
-                    ],
-                )
+                animate_swap(bar_positions, j, j + 1, chart_area)
+                bar_positions = draw_bars(data, chart_area)
                 time.sleep(0.3 / speed_control.get())
-        bar_positions = draw_bars_multithreaded(data, chart_area)
-
 
 # Thuật toán Insertion Sort
 def insert_sort(data, chart_area):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars_multithreaded(data, chart_area)
+    bar_positions = draw_bars(data, chart_area)
 
     for i in range(1, n):
         while pause_event.is_set():
@@ -441,28 +367,22 @@ def insert_sort(data, chart_area):
         key = data[i]
         j = i - 1
         while j >= 0 and key < data[j]:
-            while pause_event.is_set:
+            while pause_event.is_set():
                 time.sleep(0.1)
             if stop_event.is_set():
                 return
             data[j + 1] = data[j]
             j -= 1
         data[j + 1] = key
-        animate_swap_multithreaded(bar_positions, j + 1, i, chart_area)
-        bar_positions = draw_bars_multithreaded(
-            data,
-            chart_area,
-            ["green" if x == j + 1 or x == i else "blue" for x in range(len(data))],
-        )
+        animate_swap(bar_positions, j + 1, i, chart_area)
+        bar_positions = draw_bars(data, chart_area)
         time.sleep(0.3 / speed_control.get())
-
 
 # Chức năng thực hiện sorting theo lựa chọn từ dropdown cho từng biểu đồ
 def run_sorting_algorithm(selected_algo, data, chart_area, time_label, thread_id):
     global pause_event, stop_event
 
-    print(f"Running {selected_algo} on Tab {thread_id}")
-    start_time = time.time()
+    # Tập hợp các thuật toán sorting
     sort_algorithms = {
         "Merge Sort": lambda: merge_sort(data, 0, len(data) - 1, chart_area),
         "Quick Sort": lambda: quick_sort(data, 0, len(data) - 1, chart_area),
@@ -472,47 +392,40 @@ def run_sorting_algorithm(selected_algo, data, chart_area, time_label, thread_id
     }
 
     try:
-        while pause_event.is_set:  # Nếu đang tạm dừng
-            time.sleep(0.1)
-        if not stop_event.is_set():  # Chạy thuật toán nếu không dừng
-            sort_algorithms[selected_algo]()
+        sort_algorithms[selected_algo]()
+        if time_label:
+            time_label.config(text="Sorting Completed!")
     except Exception as e:
-        print(f"Error in thread {thread_id}: {e}")
+        print(f"Error in sorting algorithm: {e}")
 
-    if not stop_event.is_set():  # Tính thời gian nếu không bị dừng
-        elapsed_time = time.time() - start_time
-        time_label.config(text=f"Sorting Time: {elapsed_time:.2f} seconds")
+def run_chart_area(*arg):
+    chart_area_tab1.config(command=chart_area_tab1.get())
 
 def start_all_tabs_sorting():
     pause_event.clear()
     stop_event.clear()
 
-    global threads
-    threads = []
-
     if not data:
         status_label.config(text="No Data to Sort!", fg="red")
         return
 
-    # Các thuật toán sắp xếp cho từng biểu đồ
+    # Danh sách các thuật toán và chart areas
     algorithms = [
-        (algo_dropdown1.get(), data.copy(), chart_area_tab1, time_label1),
-        (algo_dropdown2_1.get(), data.copy(), chart_area_tab2_1, time_label2),
-        (algo_dropdown2_2.get(), data.copy(), chart_area_tab2_2, time_label2),
-        (algo_dropdown3_1.get(), data.copy(), chart_area_tab3_1, time_label3),
-        (algo_dropdown3_2.get(), data.copy(), chart_area_tab3_2, time_label3),
-        (algo_dropdown3_3.get(), data.copy(), chart_area_tab3_3, time_label3),
+        (algo_dropdown1.get(), data.copy(), chart_area_tab1),
+        (algo_dropdown2_1.get(), data.copy(), chart_area_tab2_1),
+        (algo_dropdown2_2.get(), data.copy(), chart_area_tab2_2),
+        (algo_dropdown3_1.get(), data.copy(), chart_area_tab3_1),
+        (algo_dropdown3_2.get(), data.copy(), chart_area_tab3_2),
+        (algo_dropdown3_3.get(), data.copy(), chart_area_tab3_3),
     ]
 
-    for algo, data_copy, chart_area, time_label in algorithms:
-        thread = threading.Thread(
-            target=run_sorting_algorithm,
-            args=(algo, data_copy, chart_area, time_label, algorithms.index((algo, data_copy, chart_area, time_label)) + 1),
-        )
-        threads.append(thread)
-        thread.start()
-
-    win.after(100, check_threads_complete)
+    # Khởi động sorting trên từng tab
+    for algo, data_copy, chart_area in algorithms:
+        if algo in ["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"]:
+            threading.Thread(
+                target=run_sorting_algorithm,
+                args=(algo, data_copy, chart_area, None, 1),
+            ).start()
     
 def check_threads_complete():
     global threads
@@ -615,10 +528,7 @@ start_sorting_button.pack(side=tk.LEFT, padx=10)
 TabControl = ttk.Notebook(win)
 
 # Tab 1
-ftab1 = ttk.Frame(TabControl, height=800, width=700, borderwidth=10, relief=tk.GROOVE)
-ftab1.pack_propagate(False)
-ftab1.pack(side=tk.LEFT, anchor="w")
-
+ftab1 = ttk.Frame(TabControl)
 # Dropdown Thuật Toán của Tab 1
 algo_dropdown1 = ttk.Combobox(
     ftab1,
@@ -633,18 +543,10 @@ algo_dropdown1 = ttk.Combobox(
 )
 algo_dropdown1.set("Merge Sort")
 algo_dropdown1.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
-
-
-fresult1 = ttk.Frame(ftab1, height=800, width=700, relief=tk.GROOVE)
-fresult1.pack(side=tk.RIGHT, anchor="w")
-
-
 chart_area_tab1 = tk.Canvas(ftab1, bg="white")
-chart_area_tab1.pack(fill=tk.BOTH, expand=True, side= tk.LEFT)
+chart_area_tab1.pack(fill=tk.BOTH, expand=True)
 
 TabControl.add(ftab1, text="Tab 1")
-
-
 
 # Tab 2
 ftab2 = ttk.Frame(TabControl)
