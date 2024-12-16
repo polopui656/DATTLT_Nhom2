@@ -581,19 +581,21 @@ bar_size_control.bind("<Motion>", update_bar_size)
 # Tạo TabControl và các Tab
 TabControl = ttk.Notebook(win)
 
-# Tab 1
-ftab1 = ttk.Frame(TabControl)
-# Dropdown Thuật Toán của Tab 1
-algo_dropdown1 = ttk.Combobox(
-    ftab1,
-    values=[
+sort_algorithm = [
         "Merge Sort",
         "Quick Sort",
         "Selection Sort",
         "Bubble Sort",
         "Insertion Sort",
         "Counting Sort"
-    ],
+        ]
+
+# Tab 1
+ftab1 = ttk.Frame(TabControl)
+# Dropdown Thuật Toán của Tab 1
+algo_dropdown1 = ttk.Combobox(
+    ftab1,
+    values= sort_algorithm,
     state="readonly",  # Dropdown chỉ đọc
 )
 algo_dropdown1.set("Merge Sort")
@@ -618,14 +620,7 @@ frame_tab2_1.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 2 - Biểu đồ 1
 algo_dropdown2_1 = ttk.Combobox(
     frame_tab2_1,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown2_1.set("Merge Sort")
@@ -641,14 +636,7 @@ frame_tab2_2.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 2 - Biểu đồ 2
 algo_dropdown2_2 = ttk.Combobox(
     frame_tab2_2,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown2_2.set("Quick Sort")
@@ -675,14 +663,7 @@ frame_tab3_1.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 1
 algo_dropdown3_1 = ttk.Combobox(
     frame_tab3_1,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_1.set("Merge Sort")
@@ -698,14 +679,7 @@ frame_tab3_2.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 2
 algo_dropdown3_2 = ttk.Combobox(
     frame_tab3_2,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_2.set("Quick Sort")
@@ -721,14 +695,7 @@ frame_tab3_3.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 3
 algo_dropdown3_3 = ttk.Combobox(
     frame_tab3_3,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_3.set("Selection Sort")
@@ -744,14 +711,7 @@ frame_tab3_4.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 4
 algo_dropdown3_4 = ttk.Combobox(
     frame_tab3_4,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_4.set("Bubble Sort")
@@ -767,14 +727,7 @@ frame_tab3_5.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 5
 algo_dropdown3_5 = ttk.Combobox(
     frame_tab3_5,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_5.set("Insertion Sort")
@@ -790,14 +743,7 @@ frame_tab3_6.grid(row=1, column=2, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 6
 algo_dropdown3_6 = ttk.Combobox(
     frame_tab3_6,
-    values=[
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-    ],
+    values= sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_6.set("Counting Sort")
