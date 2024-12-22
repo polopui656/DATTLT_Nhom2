@@ -19,6 +19,7 @@ sort_thread2 = None
 pause_event = threading.Event()
 stop_event = threading.Event()
 
+
 # Hàm cho nút Generate ngẫu nhiên, điền vào Manual Input và nhập thủ công và hiển thị các số trên cả hai biểu đồ
 def generate_random_multithreaded():
     global data
@@ -26,59 +27,84 @@ def generate_random_multithreaded():
     def generate():
         global data
         try:
-            # Lấy dữ liệu từ các trường nhập
+            # Get data from input fields
             min_val = int(min_entry.get())
             max_val = int(max_entry.get())
             count = int(count_entry.get())
 
-            # Kiểm tra giá trị hợp lệ
+            # Validate the values
             if count <= 0:
                 raise ValueError("Count must be greater than 0.")
             if min_val >= max_val:
                 raise ValueError("Min value must be less than max value.")
 
-            # Tạo dữ liệu nếu hợp lệ
+            # Generate data if valid
             data = [random.randint(min_val, max_val) for _ in range(count)]
         except ValueError as e:
-            # Hiển thị lỗi trên giao diện
+            # Display error in the UI
             status_label.config(text=f"Error: {str(e)}", fg="red")
-            data = []  # Reset dữ liệu nếu xảy ra lỗi
-
+            data = []  # Reset data if there's an error
 
     def update_ui():
         if not data:
-            # Không có dữ liệu: hiển thị lỗi
+            # No data: display an error message
             chart_area_tab1.delete("all")
             chart_area_tab1.create_text(
                 150, 300, text="No Data Available", fill="red", font=("Helvetica", 16)
             )
-            status_label.config(text="Invalid input! Please check your values.", fg="red")
+            status_label.config(
+                text="Invalid input! Please check your values.", fg="red"
+            )
         else:
-            # Có dữ liệu: cập nhật giao diện
+            # Data available: update the UI
             manual_entry.delete(0, tk.END)
             manual_entry.insert(0, ", ".join(map(str, data)))
+
+            # Check the currently selected tab
+            selected_tab = TabControl.tab(TabControl.index("current"))["text"]
+
+            # Define the height settings based on the selected tab
+            if selected_tab == "ALL Algorithm":
+                y_base, height_scale = 250, 200
+                bar_size_control.set(35)  # Adjust bar size for ALL Algorithm tab
+            else:
+                y_base, height_scale = 600, 500
+                bar_size_control.set(50)  # Adjust bar size for other tabs
+
+            # List of chart areas to update
             chart_areas = [
                 chart_area_tab1,
-                chart_area_tab2_1, chart_area_tab2_2,
-                chart_area_tab3_1, chart_area_tab3_2, chart_area_tab3_3,
-                chart_area_tab3_4, chart_area_tab3_5, chart_area_tab3_6,
+                chart_area_tab2_1,
+                chart_area_tab2_2,
+                chart_area_tab3_1,
+                chart_area_tab3_2,
+                chart_area_tab3_3,
+                chart_area_tab3_4,
+                chart_area_tab3_5,
+                chart_area_tab3_6,
             ]
+
+            # Draw bars with the appropriate height settings
             for canva in chart_areas:
-                draw_bars(data, canva)
+                draw_bars(data, canva, y_base=y_base, height_scale=height_scale)
+
             status_label.config(text="Random data generated successfully!", fg="green")
 
-    # Tạo và chạy luồng để tạo dữ liệu
+    # Create and run a thread to generate the data
     generate_thread = threading.Thread(target=generate)
     generate_thread.start()
 
-    # Hàm kiểm tra luồng và cập nhật giao diện
+    # Function to wait for the thread and then update the UI
     def wait_for_thread():
         if generate_thread.is_alive():
             win.after(100, wait_for_thread)
         else:
             update_ui()
+            # Removed the call to on_tab_change(None) here
 
+    # Start checking if the thread is complete
     wait_for_thread()
+
 
 # Hàm tạm dừng và tiếp tục sorting
 def toggle_pause_resume():
@@ -89,16 +115,18 @@ def toggle_pause_resume():
         pause_event.set()
         pause_button.config(text="Resume")
 
+
 def stop_sorting():
     stop_event.set()
     pause_event.clear()  # Bỏ tạm dừng nếu đang dừng
     pause_button.config(text="Pause")
 
+
 # Hàm cho chức năng vẽ bar chart, áp dụng cho mỗi biểu đồ riêng
-def draw_bars(data, chart_area, color_array=None):
-    chart_area.delete("all")  # Xóa canvas trước khi vẽ
+def draw_bars(data, chart_area, color_array=None, y_base=600, height_scale=500):
+    chart_area.delete("all")  # Clear the canvas before drawing
     max_value = max(data)
-    bar_width = int(bar_size_control.get())  # Lấy giá trị kích thước cột từ slider
+    bar_width = int(bar_size_control.get())  # Get the bar size from the slider
     spacing = 10
     bar_positions = []
 
@@ -107,9 +135,9 @@ def draw_bars(data, chart_area, color_array=None):
 
     for i, value in enumerate(data):
         x0 = i * (bar_width + spacing)
-        y0 = 250 - (value / max_value * 200)
+        y0 = y_base - (value / max_value * height_scale)  # Apply custom height scale
         x1 = x0 + bar_width
-        y1 = 250
+        y1 = y_base
         color = color_array[i]
 
         bar = chart_area.create_rectangle(x0, y0, x1, y1, fill=color)
@@ -117,13 +145,15 @@ def draw_bars(data, chart_area, color_array=None):
             x0 + bar_width / 2, y0 - 10, text=str(value), anchor=tk.S
         )
         bar_positions.append((bar, x0, y0, x1, y1))
-    
+
     win.update_idletasks()
     return bar_positions
-    
+
+
 def draw_bars_multithreaded(data, chart_area, color_array=None):
     def draw():
         draw_bars(data, chart_area, color_array)
+
     win.after(0, draw)
 
     # Xóa nội dung cũ trên canvas
@@ -174,6 +204,7 @@ def draw_bars_multithreaded(data, chart_area, color_array=None):
     win.update_idletasks()
     return bar_positions
 
+
 # Hàm hoán đổi vị trí của hai thanh với animation mượt mà trên mỗi biểu đồ riêng
 def animate_swap(bar_positions, i, j, chart_area, duration=0.01):
     # Đặt màu xanh lá cho các thanh đang chọn
@@ -203,25 +234,29 @@ def animate_swap(bar_positions, i, j, chart_area, duration=0.01):
     bar_positions[i], bar_positions[j] = bar_positions[j], bar_positions[i]
     win.update_idletasks()
 
+
 def animate_swap_multithreaded(bar_positions, i, j, chart_area, duration=0.01):
     def swap():
         animate_swap(bar_positions, i, j, chart_area, duration)
+
     thread = threading.Thread(target=swap)
     thread.start()
 
+
 # Thuật toán Merge Sort
-def merge_sort(data, l, r, chart_area):
+def merge_sort(data, l, r, chart_area, y_base, height_scale):
     global pause_event, stop_event
     if stop_event.is_set():
         return
     if l < r:
         m = l + (r - l) // 2
-        merge_sort(data, l, m, chart_area)
-        merge_sort(data, m + 1, r, chart_area)
-        merge(data, l, m, r, chart_area)
-        draw_bars(data, chart_area)
+        merge_sort(data, l, m, chart_area, y_base, height_scale)
+        merge_sort(data, m + 1, r, chart_area, y_base, height_scale)
+        merge(data, l, m, r, chart_area, y_base, height_scale)
+        draw_bars(data, chart_area, y_base=y_base, height_scale=height_scale)
 
-def merge(data, l, m, r, chart_area):
+
+def merge(data, l, m, r, chart_area, y_base, height_scale):
     global pause_event, stop_event
 
     n1 = m - l + 1
@@ -231,7 +266,9 @@ def merge(data, l, m, r, chart_area):
 
     i = j = 0
     k = l
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
 
     while i < n1 and j < n2:
         while pause_event.is_set():
@@ -246,7 +283,9 @@ def merge(data, l, m, r, chart_area):
             data[k] = R[j]
             animate_swap(bar_positions, m + 1 + j, k, chart_area)
             j += 1
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         time.sleep(0.3 / speed_control.get())
         k += 1
 
@@ -257,7 +296,9 @@ def merge(data, l, m, r, chart_area):
             return
         data[k] = L[i]
         animate_swap(bar_positions, l + i, k, chart_area)
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         i += 1
         k += 1
 
@@ -268,27 +309,33 @@ def merge(data, l, m, r, chart_area):
             return
         data[k] = R[j]
         animate_swap(bar_positions, m + 1 + j, k, chart_area)
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         j += 1
         k += 1
 
+
 # Thuật toán Quick Sort
-def quick_sort(data, low, high, chart_area):
+def quick_sort(data, low, high, chart_area, y_base, height_scale):
     global pause_event, stop_event
     if stop_event.is_set():
         return
     if low < high:
-        pi = partition(data, low, high, chart_area)
+        pi = partition(data, low, high, chart_area, y_base, height_scale)
         if pi == -1:
             return
-        quick_sort(data, low, pi - 1, chart_area)
-        quick_sort(data, pi + 1, high, chart_area)
+        quick_sort(data, low, pi - 1, chart_area, y_base, height_scale)
+        quick_sort(data, pi + 1, high, chart_area, y_base, height_scale)
 
-def partition(data, low, high, chart_area):
+
+def partition(data, low, high, chart_area, y_base, height_scale):
     global pause_event, stop_event
     pivot = data[high]
     i = low - 1
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
 
     for j in range(low, high):
         while pause_event.is_set():
@@ -299,19 +346,26 @@ def partition(data, low, high, chart_area):
             i += 1
             data[i], data[j] = data[j], data[i]
             animate_swap(bar_positions, i, j, chart_area)
-            bar_positions = draw_bars(data, chart_area)
+            bar_positions = draw_bars(
+                data, chart_area, y_base=y_base, height_scale=height_scale
+            )
 
     data[i + 1], data[high] = data[high], data[i + 1]
     animate_swap(bar_positions, i + 1, high, chart_area)
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
     time.sleep(0.3 / speed_control.get())
     return i + 1
 
+
 # Thuật toán Selection Sort
-def selection_sort(data, chart_area):
+def selection_sort(data, chart_area, y_base, height_scale):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
 
     for i in range(n):
         while pause_event.is_set():
@@ -328,14 +382,19 @@ def selection_sort(data, chart_area):
                 min_index = j
         data[i], data[min_index] = data[min_index], data[i]
         animate_swap(bar_positions, i, min_index, chart_area)
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         time.sleep(0.3 / speed_control.get())
 
+
 # Thuật toán Bubble Sort
-def bubble_sort(data, chart_area):
+def bubble_sort(data, chart_area, y_base, height_scale):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
 
     for i in range(n):
         while pause_event.is_set():
@@ -350,14 +409,19 @@ def bubble_sort(data, chart_area):
             if data[j] > data[j + 1]:
                 data[j], data[j + 1] = data[j + 1], data[j]
                 animate_swap(bar_positions, j, j + 1, chart_area)
-                bar_positions = draw_bars(data, chart_area)
+                bar_positions = draw_bars(
+                    data, chart_area, y_base=y_base, height_scale=height_scale
+                )
                 time.sleep(0.3 / speed_control.get())
 
+
 # Thuật toán Insertion Sort
-def insert_sort(data, chart_area):
+def insert_sort(data, chart_area, y_base, height_scale):
     global pause_event, stop_event
     n = len(data)
-    bar_positions = draw_bars(data, chart_area)
+    bar_positions = draw_bars(
+        data, chart_area, y_base=y_base, height_scale=height_scale
+    )
 
     for i in range(1, n):
         while pause_event.is_set():
@@ -375,52 +439,74 @@ def insert_sort(data, chart_area):
             j -= 1
         data[j + 1] = key
         animate_swap(bar_positions, j + 1, i, chart_area)
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         time.sleep(0.3 / speed_control.get())
 
-#Thuật toán Counting Sort
-def counting_sort(data, chart_area):
+
+# Thuật toán Counting Sort
+def counting_sort(data, chart_area, y_base, height_scale):
     global pause_event, stop_event
     if not data:
         return
-    
+
     max_val = max(data)
     min_val = min(data)
     range_of_elements = max_val - min_val + 1
     count = [0 for _ in range(range_of_elements)]
     output = [0 for _ in range(len(data))]
-    
-    for i in range(0, len(data)):
+
+    # Count occurrences of each element
+    for i in range(len(data)):
         count[data[i] - min_val] += 1
-    
+
+    # Cumulative sum to get the final positions
     for i in range(1, len(count)):
-        count[i] += count[i-1]
-    
-    i = len(data)-1
+        count[i] += count[i - 1]
+
+    # Build the output array in sorted order
+    i = len(data) - 1
     while i >= 0:
         output[count[data[i] - min_val] - 1] = data[i]
         count[data[i] - min_val] -= 1
         i -= 1
-    
-    for i in range(0, len(data)):
+
+    # Copy the sorted elements back to the original data array
+    for i in range(len(data)):
+        while pause_event.is_set():
+            time.sleep(0.1)
+        if stop_event.is_set():
+            return
+
         data[i] = output[i]
-        bar_positions = draw_bars(data, chart_area)
+        bar_positions = draw_bars(
+            data, chart_area, y_base=y_base, height_scale=height_scale
+        )
         animate_swap(bar_positions, i, i, chart_area)
         time.sleep(0.3 / speed_control.get())
-        
-   
+
+
 # Chức năng thực hiện sorting theo lựa chọn từ dropdown cho từng biểu đồ
-def run_sorting_algorithm(selected_algo, data, chart_area, time_label, thread_id):
+def run_sorting_algorithm(
+    selected_algo, data, chart_area, time_label, thread_id, y_base, height_scale
+):
     global pause_event, stop_event
 
-    # Tập hợp các thuật toán sorting
+    # Dictionary of sorting algorithms with the y_base and height_scale parameters
     sort_algorithms = {
-        "Merge Sort": lambda: merge_sort(data, 0, len(data) - 1, chart_area),
-        "Quick Sort": lambda: quick_sort(data, 0, len(data) - 1, chart_area),
-        "Selection Sort": lambda: selection_sort(data, chart_area),
-        "Bubble Sort": lambda: bubble_sort(data, chart_area),
-        "Insertion Sort": lambda: insert_sort(data, chart_area),
-        "Counting Sort": lambda: counting_sort(data, chart_area),
+        "Merge Sort": lambda: merge_sort(
+            data, 0, len(data) - 1, chart_area, y_base, height_scale
+        ),
+        "Quick Sort": lambda: quick_sort(
+            data, 0, len(data) - 1, chart_area, y_base, height_scale
+        ),
+        "Selection Sort": lambda: selection_sort(
+            data, chart_area, y_base, height_scale
+        ),
+        "Bubble Sort": lambda: bubble_sort(data, chart_area, y_base, height_scale),
+        "Insertion Sort": lambda: insert_sort(data, chart_area, y_base, height_scale),
+        "Counting Sort": lambda: counting_sort(data, chart_area, y_base, height_scale),
     }
 
     try:
@@ -439,7 +525,14 @@ def start_all_tabs_sorting():
         status_label.config(text="No Data to Sort!", fg="red")
         return
 
-    # Danh sách các thuật toán và chart areas
+    # Determine y_base and height_scale based on the selected tab
+    selected_tab = TabControl.tab(TabControl.index("current"))["text"]
+    if selected_tab == "ALL Algorithm":
+        y_base, height_scale = 250, 200
+    else:
+        y_base, height_scale = 600, 500
+
+    # List of algorithms and chart areas
     algorithms = [
         (algo_dropdown1.get(), data.copy(), chart_area_tab1),
         (algo_dropdown2_1.get(), data.copy(), chart_area_tab2_1),
@@ -452,14 +545,22 @@ def start_all_tabs_sorting():
         (algo_dropdown3_6.get(), data.copy(), chart_area_tab3_6),
     ]
 
-    # Khởi động sorting trên từng tab
+    # Start sorting in separate threads
     for algo, data_copy, chart_area in algorithms:
-        if algo in ["Merge Sort", "Quick Sort", "Selection Sort", "Bubble Sort", "Insertion Sort","Counting Sort"]:
+        if algo in [
+            "Merge Sort",
+            "Quick Sort",
+            "Selection Sort",
+            "Bubble Sort",
+            "Insertion Sort",
+            "Counting Sort",
+        ]:
             threading.Thread(
                 target=run_sorting_algorithm,
-                args=(algo, data_copy, chart_area, None, 1),
+                args=(algo, data_copy, chart_area, None, 1, y_base, height_scale),
             ).start()
-    
+
+
 def check_threads_complete():
     global threads
     if any(thread.is_alive() for thread in threads):
@@ -468,11 +569,12 @@ def check_threads_complete():
         print("All sorting threads have completed.")
         status_label.config(text="All sorting threads completed!", fg="blue")
 
+
 # Chức năng sắp xếp thuật toán
 def start_sorting():
     global data
 
-    # Lấy dữ liệu từ Manual Input
+    # Get data from Manual Input
     try:
         manual_data = list(map(int, manual_entry.get().split(",")))
         if manual_data:
@@ -485,13 +587,75 @@ def start_sorting():
         return
 
     if not data:
-        status_label.config(text="No Data to Sort! Please generate or input data.", fg="red")
+        status_label.config(
+            text="No Data to Sort! Please generate or input data.", fg="red"
+        )
         return
 
+    # Set status to "Sorting started..."
     status_label.config(text="Sorting started...", fg="green")
 
-    # Bắt đầu sorting trên tất cả các tab
+    # Start sorting on all tabs
     start_all_tabs_sorting()
+
+
+def start_all_tabs_sorting():
+    pause_event.clear()
+    stop_event.clear()
+
+    if not data:
+        status_label.config(text="No Data to Sort!", fg="red")
+        return
+
+    # Determine y_base and height_scale based on the selected tab
+    selected_tab = TabControl.tab(TabControl.index("current"))["text"]
+    if selected_tab == "ALL Algorithm":
+        y_base, height_scale = 250, 200
+    else:
+        y_base, height_scale = 600, 500
+
+    # List of algorithms and chart areas
+    algorithms = [
+        (algo_dropdown1.get(), data.copy(), chart_area_tab1),
+        (algo_dropdown2_1.get(), data.copy(), chart_area_tab2_1),
+        (algo_dropdown2_2.get(), data.copy(), chart_area_tab2_2),
+        (algo_dropdown3_1.get(), data.copy(), chart_area_tab3_1),
+        (algo_dropdown3_2.get(), data.copy(), chart_area_tab3_2),
+        (algo_dropdown3_3.get(), data.copy(), chart_area_tab3_3),
+        (algo_dropdown3_4.get(), data.copy(), chart_area_tab3_4),
+        (algo_dropdown3_5.get(), data.copy(), chart_area_tab3_5),
+        (algo_dropdown3_6.get(), data.copy(), chart_area_tab3_6),
+    ]
+
+    # Keep track of the threads
+    threads = []
+
+    for algo, data_copy, chart_area in algorithms:
+        if algo in [
+            "Merge Sort",
+            "Quick Sort",
+            "Selection Sort",
+            "Bubble Sort",
+            "Insertion Sort",
+            "Counting Sort",
+        ]:
+            thread = threading.Thread(
+                target=run_sorting_algorithm,
+                args=(algo, data_copy, chart_area, None, 1, y_base, height_scale),
+            )
+            threads.append(thread)
+            thread.start()
+
+    # Check if all threads are complete and update the status
+    def check_threads_complete():
+        if any(thread.is_alive() for thread in threads):
+            win.after(100, check_threads_complete)
+        else:
+            status_label.config(text="Sorting complete!", fg="blue")
+
+    # Start checking the thread completion
+    check_threads_complete()
+
 
 # Giao diện cho phần nhập và các nút chức năng
 input_frame = tk.Frame(win)
@@ -542,12 +706,10 @@ def update_slider_label(event):
     slider_label.config(text=f"Speed: {int(speed_control.get())}")
 
 
-speed_control.bind("<Motion>", update_slider_label)
+speed_control.bind("<B1-Motion>", update_slider_label)
 
 # Nút Pause & Stop
-start_sorting_button = ttk.Button(
-    slider_frame, text="Start", command=start_sorting
-)
+start_sorting_button = ttk.Button(slider_frame, text="Start", command=start_sorting)
 start_sorting_button.pack(side=tk.LEFT, padx=10)
 
 pause_button = ttk.Button(slider_frame, text="Pause", command=toggle_pause_resume)
@@ -562,46 +724,53 @@ size_label.pack(side=tk.LEFT, padx=(20, 5))
 
 bar_size_control = ttk.Scale(slider_frame, from_=10, to=100, orient=tk.HORIZONTAL)
 bar_size_control.pack(side=tk.LEFT)
-bar_size_control.set(35 )  # Giá trị mặc định
+bar_size_control.set(10)  # Giá trị mặc định
+
 
 def update_bar_size(event):
     chart_areas = [
-                    chart_area_tab1,
-                    chart_area_tab2_1, chart_area_tab2_1,
-                    chart_area_tab3_1, chart_area_tab3_2, chart_area_tab3_3,
-                    chart_area_tab3_4, chart_area_tab3_5, chart_area_tab3_6,
-                ]
+        chart_area_tab1,
+        chart_area_tab2_1,
+        chart_area_tab2_2,
+        chart_area_tab3_1,
+        chart_area_tab3_2,
+        chart_area_tab3_3,
+        chart_area_tab3_4,
+        chart_area_tab3_5,
+        chart_area_tab3_6,
+    ]
     for canva in chart_areas:
         draw_bars(data, canva)
 
+
 # Bind the slider to the update function
-bar_size_control.bind("<Motion>", update_bar_size)
+bar_size_control.bind("<B1-Motion>", update_bar_size)
 
 # Bảng Thứ 1
 # Tạo TabControl và các Tab
 TabControl = ttk.Notebook(win)
 
 sort_algorithm = [
-        "Merge Sort",
-        "Quick Sort",
-        "Selection Sort",
-        "Bubble Sort",
-        "Insertion Sort",
-        "Counting Sort"
-        ]
+    "Merge Sort",
+    "Quick Sort",
+    "Selection Sort",
+    "Bubble Sort",
+    "Insertion Sort",
+    "Counting Sort",
+]
 
 # Tab 1
 ftab1 = ttk.Frame(TabControl)
 # Dropdown Thuật Toán của Tab 1
 algo_dropdown1 = ttk.Combobox(
     ftab1,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",  # Dropdown chỉ đọc
 )
 algo_dropdown1.set("Merge Sort")
 algo_dropdown1.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 chart_area_tab1 = tk.Canvas(ftab1, bg="white")
-chart_area_tab1.pack(fill=tk.BOTH, expand=True)
+chart_area_tab1.pack(fill=tk.BOTH, expand=True, padx=10)
 
 TabControl.add(ftab1, text="One Algorithm")
 
@@ -620,7 +789,7 @@ frame_tab2_1.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 2 - Biểu đồ 1
 algo_dropdown2_1 = ttk.Combobox(
     frame_tab2_1,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown2_1.set("Merge Sort")
@@ -636,7 +805,7 @@ frame_tab2_2.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 2 - Biểu đồ 2
 algo_dropdown2_2 = ttk.Combobox(
     frame_tab2_2,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown2_2.set("Quick Sort")
@@ -646,6 +815,7 @@ chart_area_tab2_2 = tk.Canvas(frame_tab2_2, bg="white")
 chart_area_tab2_2.pack(fill=tk.BOTH, expand=True)
 
 TabControl.add(ftab2, text="Two Algorithm")
+
 
 # Tab 3
 ftab3 = ttk.Frame(TabControl)
@@ -663,13 +833,16 @@ frame_tab3_1.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 1
 algo_dropdown3_1 = ttk.Combobox(
     frame_tab3_1,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_1.set("Merge Sort")
 algo_dropdown3_1.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
-chart_area_tab3_1 = tk.Canvas(frame_tab3_1, bg="white",)
+chart_area_tab3_1 = tk.Canvas(
+    frame_tab3_1,
+    bg="white",
+)
 chart_area_tab3_1.pack(fill=tk.BOTH, expand=True)
 
 # Frame Biểu Đồ 2
@@ -679,7 +852,7 @@ frame_tab3_2.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 2
 algo_dropdown3_2 = ttk.Combobox(
     frame_tab3_2,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_2.set("Quick Sort")
@@ -695,7 +868,7 @@ frame_tab3_3.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 3
 algo_dropdown3_3 = ttk.Combobox(
     frame_tab3_3,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_3.set("Selection Sort")
@@ -711,7 +884,7 @@ frame_tab3_4.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 4
 algo_dropdown3_4 = ttk.Combobox(
     frame_tab3_4,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_4.set("Bubble Sort")
@@ -727,7 +900,7 @@ frame_tab3_5.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 5
 algo_dropdown3_5 = ttk.Combobox(
     frame_tab3_5,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_5.set("Insertion Sort")
@@ -743,7 +916,7 @@ frame_tab3_6.grid(row=1, column=2, sticky="nsew", padx=5, pady=5)
 # Dropdown Thuật Toán của Tab 3 - Biểu đồ 6
 algo_dropdown3_6 = ttk.Combobox(
     frame_tab3_6,
-    values= sort_algorithm,
+    values=sort_algorithm,
     state="readonly",
 )
 algo_dropdown3_6.set("Counting Sort")
@@ -755,6 +928,38 @@ chart_area_tab3_6.pack(fill=tk.BOTH, expand=True)
 TabControl.add(ftab3, text="ALL Algorithm")
 
 TabControl.pack(expand=1, fill="both")
+
+
+# Điều chỉnh chiều cao khi bấm qua tab ALl Algorithm
+def on_tab_change(event):
+    selected_tab = event.widget.tab(event.widget.index("current"))["text"]
+
+    # Define the height settings based on the selected tab
+    if selected_tab == "ALL Algorithm":
+        bar_size_control.set(10)
+        y_base, height_scale = 250, 100
+    else:
+        bar_size_control.set(50)
+        y_base, height_scale = 600, 500
+
+    # Redraw bars with the appropriate height settings
+    chart_areas = [
+        chart_area_tab1,
+        chart_area_tab2_1,
+        chart_area_tab2_2,
+        chart_area_tab3_1,
+        chart_area_tab3_2,
+        chart_area_tab3_3,
+        chart_area_tab3_4,
+        chart_area_tab3_5,
+        chart_area_tab3_6,
+    ]
+
+    for canva in chart_areas:
+        draw_bars(data, canva, y_base=y_base, height_scale=height_scale)
+
+
+TabControl.bind("<<NotebookTabChanged>>", on_tab_change)
 
 # Bắt đầu Giao diện
 win.mainloop()
